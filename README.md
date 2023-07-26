@@ -1,0 +1,2 @@
+# wildland-fire-suppression-resources-placement
+Final Project for the Master Course "Mathematical Optimisation". Implementation of a model of mixed-integer linear programming from Mendes, A. B., & e Alvelos, F. P. (2023). Iterated local search for the placement of wildland fire suppression resources. European Journal of Operational Research, 304(3), 887-900, https://doi.org/10.1016/j.ejor.2022.04.037. 
