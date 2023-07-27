@@ -7,7 +7,6 @@ import networkx as nx
 import pickle
 from FRPinstance import FRPInstance
 import copy
-import logging
 import time
 import csv
 DEBUG = False
@@ -30,7 +29,7 @@ def evaluate(FRP):
 
 
 def constructRandomSolution(FRP):
-    while (min(nx.single_source_shortest_path_length(FRP.updated_graph, FRP.ignition_node).values()) < FRP.time_horizon)\
+    while (min(nx.single_source_shortest_path_length(FRP.updated_graph, FRP.ignition_node).values()) <= FRP.time_horizon)\
             and (len(FRP.resources) > 0):
         first_available_res_time = find_first_non_zero(FRP.n_resources_time)
         FRP.update_fire_arrival_times()
@@ -59,18 +58,26 @@ def multiStartConstructiveHeuristic(FRP):
         FRP = FRP.reset()
         FRP, fCRS = constructRandomSolution(FRP)
         if fCRS < fstar:
-            sstar = FRP.solution
             FRP.update_current_value()
             FRPstar = copy.deepcopy(FRP)
             fstar = FRP.get_value()
-            logging.debug(fstar)
     FRPstar.OFV_CH = fstar
     return FRPstar, FRPstar.get_value()
 
 
+def get_all_neighbors(FRP, i, j):
+    neighbors = []
+    # Check lateral neighbors
+    lateral_neighbors = [(i + x, j + y) for x in [-1, 0, 1] for y in [-1, 0, 1] if (x, y) != (0, 0)]
+    for x, y in lateral_neighbors:
+        if 0 <= x < FRP.size and 0 <= y < FRP.size:
+            neighbors.append((x, y))
+    return neighbors
+
+
 def generateNeighborhood(node0, FRP):
     #neighbours of node0
-    neighbor_nodes = list(FRP.updated_graph.neighbors(node0))
+    neighbor_nodes = get_all_neighbors(FRP, node0[0], node0[1])
     #neighbours of other resources
     for (i,j,k) in zip(np.nonzero(FRP.solution)[0],np.nonzero(FRP.solution)[1],np.nonzero(FRP.solution)[2]):
         neighbor_nodes.append(list(FRP.updated_graph.neighbors((i,j))))
@@ -117,9 +124,7 @@ def localSearch(FRP):
                 unfeasible = False
                 #check whether there is already a resource in node1
                 if np.max(FRP.solution[node1[0], node1[1], :]) > 0:
-                    logging.debug("ALREADY A RESOURCE")
                     continue
-                logging.debug("LOCAL SEARCH ON GOING")
                 #place the available resource at node1
                 FRP.add_resource(node1[0],node1[1],k)
                 #update the fire travel time to the adjacent unburned nodes of node1
@@ -135,11 +140,6 @@ def localSearch(FRP):
                     # update the fire travel time to the adjacent unburned nodes
                     FRP.update_fire_propagation_times(node1[0], node1[1], k, after_removing=True)
                     FRP.update_fire_arrival_times()
-                    logging.debug("UNFEASIBLE")
-                    logging.debug("placed res: ")
-                    logging.debug(np.count_nonzero(FRP.solution))
-                    logging.debug("available res: ")
-                    logging.debug(len(FRP.resources))
                     continue
                 #if the solution is feasible and the best possible improvement then Save movement as the bestMovement
                 FRP.update_current_value()
@@ -148,43 +148,18 @@ def localSearch(FRP):
                     value = value_new
                     bestMovement = copy.deepcopy(FRP)
                     improvement = True
-                    logging.debug("NEW BESTMOVEMENT")
-                    logging.debug(value)
                 #remove resource from node1
                 FRP.remove_resource(node1[0], node1[1], k)
                 #update the fire travel time to the adjacent unburned nodes
                 FRP.update_fire_propagation_times(node1[0], node1[1], k, after_removing=True)
                 FRP.update_fire_arrival_times()
-                if np.count_nonzero(FRP.solution) + len(FRP.resources) < 5:
-                    logging.debug("LOST A RESOURCE")
-                logging.debug("FEASIBLE")
-                logging.debug("placed res: ")
-                logging.debug(np.count_nonzero(FRP.solution))
-                logging.debug("available res: ")
-                logging.debug(len(FRP.resources))
             #restore the resource to node0
             FRP.add_resource(i,j,k)
             FRP.update_fire_propagation_times(i, j, k, after_removing=False)
             FRP.update_fire_arrival_times()
-            logging.debug("RESTORED")
-            logging.debug("placed res: ")
-            logging.debug(np.count_nonzero(FRP.solution))
-            logging.debug("available res: ")
-            logging.debug(len(FRP.resources))
         #if there is improvement then execute the bestMovement
         if improvement:
             FRP = copy.deepcopy(bestMovement)
-            logging.debug("IMPROVEMENT")
-            logging.debug("placed res: ")
-            logging.debug(np.count_nonzero(FRP.solution))
-            logging.debug("available res: ")
-            logging.debug(len(FRP.resources))
-        else:
-            logging.debug("NO IMPROVEMENT")
-            logging.debug("placed res: ")
-            logging.debug(np.count_nonzero(FRP.solution))
-            logging.debug("available res: ")
-            logging.debug(len(FRP.resources))
     FRP.update_current_value()
     return FRP, FRP.get_value()
 
@@ -220,11 +195,6 @@ def perturbation(best_FRP):
         #update the fire travel time to its adjacent nodes
         FRP.update_fire_propagation_times(i,j,k,after_removing=True)
         FRP.update_fire_arrival_times()
-        logging.debug("REMOVED RES")
-        logging.debug("placed res: ")
-        logging.debug(np.count_nonzero(FRP.solution))
-        logging.debug("available res: ")
-        logging.debug(len(FRP.resources))
     else:
         if rnd < probRemovingRes + prob2:
             #find the least release time of an available resource
@@ -249,11 +219,6 @@ def perturbation(best_FRP):
             FRP.add_resource(selected_node[0], selected_node[1], first_available_res_time)
             #update fire travel time to its adjacent nodes
             FRP.update_fire_propagation_times(selected_node[0], selected_node[1], first_available_res_time, after_removing=False)
-            logging.debug("ADDED RES")
-            logging.debug("placed res: ")
-            logging.debug(np.count_nonzero(FRP.solution))
-            logging.debug("available res: ")
-            logging.debug(len(FRP.resources))
         else:
             mod = 0
             failure = 0
@@ -277,8 +242,8 @@ def perturbation(best_FRP):
                 for (i, j, k) in zip(np.nonzero(FRP.solution)[0], np.nonzero(FRP.solution)[1], np.nonzero(FRP.solution)[2]):
                     if (i, j) in unburned_nodes:
                         unburned_nodes.remove((i, j))
-                unique_unburned_nodes = [item for item in unburned_nodes
-                                                if unburned_nodes.count(item) == 1]
+                unique_unburned_nodes = [node for node in unburned_nodes
+                                                if unburned_nodes.count(node) == 1]
                 sorted_unique_unburned_nodes = sorted(unique_unburned_nodes, key=lambda node: FRP.fire_arrivals[node])
                 neighbourhood = sorted_unique_unburned_nodes[0:maxNeighbourhoodSize]
                 #randomly select a node from the neighbourhood
@@ -291,7 +256,8 @@ def perturbation(best_FRP):
                 #run dijkstra's algorithm to determine the fire arrival instants
                 FRP.update_fire_arrival_times()
                 #assess the solution feasibility
-                for (l,m,n) in zip(np.nonzero(FRP.solution)[0], np.nonzero(FRP.solution)[1], np.nonzero(FRP.solution)[2]):
+                nodes_with_resources = np.nonzero(FRP.solution)
+                for (l,m,n) in zip(nodes_with_resources[0], nodes_with_resources[1], nodes_with_resources[2]):
                     if FRP.fire_arrivals[(l,m)] < n:
                         unfeasible = True
                         break
@@ -300,11 +266,6 @@ def perturbation(best_FRP):
                 if not unfeasible:
                     mod = mod + 1
                     failure = 0
-                    logging.debug("MODIFICATION")
-                    logging.debug("placed res: ")
-                    logging.debug(np.count_nonzero(FRP.solution))
-                    logging.debug("available res: ")
-                    logging.debug(len(FRP.resources))
                 else:
                     #undo the proposed movement
                     #remove the resource from new location
@@ -319,11 +280,6 @@ def perturbation(best_FRP):
                                                       time_resource_placed, after_removing=False)
                     #increment failures count
                     failure = failure + 1
-                    logging.debug("FAILURE")
-                    logging.debug("placed res: ")
-                    logging.debug(np.count_nonzero(FRP.solution))
-                    logging.debug("available res: ")
-                    logging.debug(len(FRP.resources))
     #run dijkstra algorithm
     FRP.update_fire_arrival_times()
     FRP.update_current_value()
@@ -372,8 +328,6 @@ def setGlobalParameters(FRP):
 
 
 def iteratedLocalSearch(FRP, show_plot=False):
-    if DEBUG:
-        logging.basicConfig(level=logging.DEBUG, format='%(name)s - %(levelname)s - %(message)s')
     setGlobalParameters(FRP)
     FRP, f_CH = multiStartConstructiveHeuristic(FRP)
     FRP, f_LS = localSearch(FRP)
@@ -383,27 +337,12 @@ def iteratedLocalSearch(FRP, show_plot=False):
     no_improvement_counter = 0
     while no_improvement_counter < maxIterationsWithoutImprovement:
         FRP, f_p = perturbation(best_FRP)
-        logging.debug("PERTURBATION FINISHED")
-        logging.debug("placed res: ")
-        logging.debug(np.count_nonzero(FRP.solution))
-        logging.debug("available res: ")
-        logging.debug(len(FRP.resources))
         FRP, f_LS = localSearch(FRP)
-        logging.debug("LOCAL SEARCH FINISHED")
-        logging.debug("placed res: ")
-        logging.debug(np.count_nonzero(FRP.solution))
-        logging.debug("available res: ")
-        logging.debug(len(FRP.resources))
         best_FRP = acceptanceCriterion(FRP, best_FRP)
-        logging.debug("value:")
-        logging.debug(best_FRP.get_value())
-        logging.debug("res unused:")
-        logging.debug(len(best_FRP.resources))
         if best_FRP.get_value() == fstar:
             no_improvement_counter = no_improvement_counter + 1
         else:
             no_improvement_counter = 0
-            logging.debug("IMPROVEMENT ILS")
             fstar = best_FRP.get_value()
     if show_plot:
         best_FRP.show()
@@ -429,6 +368,7 @@ def test_ILS(dataset, n_resources, delta=50, time_horizon=28, n_replications = 5
         cumulative_OFV_ILS = 0
         t_0 = time.time()
         for i in range(n_replications):
+            print("run #" + str(i))
             FRP = FRPInstance(data["size"], data["ignition_node"], data["graph"], n_resources, delta=delta,
                               time_horizon=time_horizon)
             best_FRP = iteratedLocalSearch(FRP, show_plot=False)

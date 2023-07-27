@@ -25,7 +25,7 @@ def fire_resource_placement_model(dict, time_horizon, setup1):
     # h target instant
     h = time_horizon
     # K set of time instants
-    K = range(1,h+1) #start from 0 or 1?
+    K = range(0,h)
     # ign ignition node
     ign = dict["ignition_node"]
     # n number of nodes
@@ -95,7 +95,7 @@ def fire_resource_placement_model(dict, time_horizon, setup1):
     # each node can receive at most one resource throughout the planning period
     FRP.addConstrs((gb.quicksum(Z[i,k,r] for r in R for k in K) <= 1 for i in N), name='Constraint7')
     # allows assigning resources at instant 1, based on the number of resources that were released (a1) (note time instant 1 is at index 0)
-    FRP.addConstr((gb.quicksum(Z[i,1,r] for i in N for r in R) + O[1] == a[0]), name='Constraint8')
+    FRP.addConstr((gb.quicksum(Z[i,1,r] for i in N for r in R) + O[0] == a[0]), name='Constraint8')
     # controls the number of available resources by balancing the number of unassigned resources at the end of each time period
     FRP.addConstrs((gb.quicksum(Z[i,k,r] for i in N for r in R) + O[k] == a[k-1] + O[k-1] for k in K[1:]), name='Constraint9')
     # checked whether node i is burned at instant bk
