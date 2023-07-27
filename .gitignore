@@ -1,0 +1,8 @@
+.idea
+*.txt
+.DS_Store
+#.pickle
+*.csv
+bin
+#env
+ILS/bin
