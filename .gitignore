@@ -1,8 +1,9 @@
 .idea
 *.txt
 .DS_Store
-#.pickle
+.pickle
 *.csv
 bin
-#env
+env
+Results
 ILS/bin

@@ -1,5 +1,8 @@
 '''
+Author: Marco Giberna
+Email: gibimarco@gmail.com
 CPU model: Intel(R) Core(TM) i5-5350U CPU @ 1.80GHz
+python3.9.9
 '''
 import random
 import numpy as np
@@ -9,7 +12,6 @@ from FRPinstance import FRPInstance
 import copy
 import time
 import csv
-DEBUG = False
 
 
 def find_first_non_zero(arr):
@@ -33,9 +35,9 @@ def constructRandomSolution(FRP):
             and (len(FRP.resources) > 0):
         first_available_res_time = find_first_non_zero(FRP.n_resources_time)
         FRP.update_fire_arrival_times()
-#        burned_nodes = {node for node, time in fire_arrivals.items() if time < first_available_res_time}
+        # burned_nodes = {node for node, time in fire_arrivals.items() if time < first_available_res_time}
         unburned_nodes = {node for node, time in FRP.fire_arrivals.items() if time >= first_available_res_time}
-#        sorted_burned_nodes = sorted(burned_nodes, key=lambda node: fire_arrivals[node])
+        # sorted_burned_nodes = sorted(burned_nodes, key=lambda node: fire_arrivals[node])
         sorted_unburned_nodes = sorted(unburned_nodes, key=lambda node: FRP.fire_arrivals[node])
         restricted_unburned_nodes = sorted_unburned_nodes[0:restrictedCandidateListSize]
         selected_random_node = restricted_unburned_nodes[random.randint(0, len(restricted_unburned_nodes) - 1)]
@@ -80,7 +82,7 @@ def generateNeighborhood(node0, FRP):
     neighbor_nodes = get_all_neighbors(FRP, node0[0], node0[1])
     #neighbours of other resources
     for (i,j,k) in zip(np.nonzero(FRP.solution)[0],np.nonzero(FRP.solution)[1],np.nonzero(FRP.solution)[2]):
-        neighbor_nodes.append(list(FRP.updated_graph.neighbors((i,j))))
+        neighbor_nodes.append(get_all_neighbors(FRP, i, j))
     #rewrite list as a list of nodes
     neighbor_nodes = [node for sublist in neighbor_nodes for node in (sublist if isinstance(sublist, list) else [sublist])]
     #remove nodes where a resource is placed already
@@ -132,7 +134,7 @@ def localSearch(FRP):
                 FRP.update_fire_arrival_times()
                 #check solution feasibility (if fire time arrival is lower then when a resource in that node has been placed)
                 for (l,m,n) in zip(np.nonzero(FRP.solution)[0], np.nonzero(FRP.solution)[1], np.nonzero(FRP.solution)[2]):
-                    if FRP.fire_arrivals[(l,m)] <= n:
+                    if FRP.fire_arrivals[(l,m)] < n:
                         unfeasible = True
                 if unfeasible:
                     # remove resource from node1
@@ -350,7 +352,7 @@ def iteratedLocalSearch(FRP, show_plot=False):
     return copy.deepcopy(best_FRP)
 
 
-def test_ILS(dataset, n_resources, delta=50, time_horizon=28, n_replications = 5):
+def test_ILS(dataset, n_resources, delta=50, time_horizon=28, n_replications=5, show_plot=False):
     final_dataset = []
     keys = ["instance", "FRP", "best_OFV_CH", "best_OFV_LS", "best_OFV_ILS", "avg_OFV_CH", "avg_OFV_LS", "avg_OFV_ILS",
             "avg_runtime", "total_runtime"]
@@ -360,6 +362,7 @@ def test_ILS(dataset, n_resources, delta=50, time_horizon=28, n_replications = 5
         writer = csv.DictWriter(fp, fieldnames=solution.keys())
         writer.writeheader()
     for data in dataset:
+        print("Initializing instance " + str(data["instance"]) + "...")
         best_OFV_CH = float('inf')
         best_OFV_LS = float('inf')
         best_OFV_ILS = float('inf')
@@ -368,7 +371,7 @@ def test_ILS(dataset, n_resources, delta=50, time_horizon=28, n_replications = 5
         cumulative_OFV_ILS = 0
         t_0 = time.time()
         for i in range(n_replications):
-            print("run #" + str(i))
+            print("Run #" + str(i) + "...")
             FRP = FRPInstance(data["size"], data["ignition_node"], data["graph"], n_resources, delta=delta,
                               time_horizon=time_horizon)
             best_FRP = iteratedLocalSearch(FRP, show_plot=False)
@@ -379,6 +382,8 @@ def test_ILS(dataset, n_resources, delta=50, time_horizon=28, n_replications = 5
             cumulative_OFV_CH = cumulative_OFV_CH + best_FRP.OFV_CH
             cumulative_OFV_LS = cumulative_OFV_LS + best_FRP.OFV_LS
             cumulative_OFV_ILS = cumulative_OFV_ILS + best_FRP.OFV_ILS
+            if show_plot:
+                best_FRP.show()
         total_runtime = time.time() - t_0
         avg_OFV_CH = cumulative_OFV_CH / n_replications
         avg_OFV_LS = cumulative_OFV_LS / n_replications
@@ -396,20 +401,19 @@ def test_ILS(dataset, n_resources, delta=50, time_horizon=28, n_replications = 5
         solution["total_runtime"] = total_runtime
         final_dataset.append(solution)
         solution["FRP"] = ""
-        print("Instance " + str(data["instance"]) + " finished... \nResults:")
+        print("Instance " + str(data["instance"]) + " finished. \nResults:")
         print(solution)
         with open("../dataset_ILS_" + str(n_resources) + "resources.csv", "a", newline="") as fp:
             writer = csv.DictWriter(fp, fieldnames=solution.keys())
             writer.writerow(solution)
-        if data["instance"]%10==0:
-            best_FRP.show()
     with open('dataset_ILS_' + str(n_resources) + 'resources.pickle', 'wb') as file:
         pickle.dump(final_dataset, file)
+
 
 if __name__ == '__main__':
     with open('../dataset.pickle', 'rb') as file:
         dataset = pickle.load(file)
-    test_ILS(dataset, n_resources=5, delta=50, time_horizon=28, n_replications=5)
+    test_ILS(dataset, n_resources=5, delta=50, time_horizon=28, n_replications=5, show_plot=False)
     with open('../dataset.pickle', 'rb') as file:
         dataset = pickle.load(file)
-    test_ILS(dataset, n_resources=6, delta=50, time_horizon=28, n_replications=5)
+    test_ILS(dataset, n_resources=6, delta=50, time_horizon=28, n_replications=5, show_plot=False)

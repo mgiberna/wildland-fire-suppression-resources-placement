@@ -1,8 +1,14 @@
+'''
+Author: Marco Giberna
+Email: gibimarco@gmail.com
+python3.9.9
+'''
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-first_deployment_instant = 15
-second_deployment_instant = 10
+import copy
+first_deployment_instant = 14
+second_deployment_instant = 9
 
 class FRPInstance:
     def __init__(self, size, ignition_node, graph, n_resources, delta=50, time_horizon=28):
@@ -34,14 +40,14 @@ class FRPInstance:
 
     def copy(self):
         new_FRP = FRPInstance(self.size, self.ignition_node, self.graph, self.n_resources, self.delta, self.time_horizon)
-        new_FRP.updated_graph = self.updated_graph
-        new_FRP.resources = self.resources
-        new_FRP.n_resources_time = self.n_resources_time
-        new_FRP.solution = self.solution
-        new_FRP.value = self.value
-        new_FRP.OFV_CH = self.OFV_CH
-        new_FRP.OFV_LS = self.OFV_LS
-        new_FRP.OFV_ILS = self.OFV_ILS
+        new_FRP.updated_graph = copy.deepcopy(self.updated_graph)
+        new_FRP.resources = copy.deepcopy(self.resources)
+        new_FRP.n_resources_time = copy.deepcopy(self.n_resources_time)
+        new_FRP.solution = copy.deepcopy(self.solution)
+        new_FRP.value = copy.deepcopy(self.value)
+        new_FRP.OFV_CH = copy.deepcopy(self.OFV_CH)
+        new_FRP.OFV_LS = copy.deepcopy(self.OFV_LS)
+        new_FRP.OFV_ILS = copy.deepcopy(self.OFV_ILS)
         return new_FRP
 
     def add_resource(self, i,j,k):
@@ -136,15 +142,15 @@ class FRPInstance:
         nx.draw_networkx_labels(self.updated_graph, pos, labels=self.fire_arrivals, font_size=12, font_color='red', font_weight='bold')
         plt.title("Graph with Fire Arrival Times")
         plt.axis('equal')
-        text_x, text_y = -0.2 * self.size, 0.95 * self.size
+        text_x, text_y = -0.2 * self.size, 0.85 * self.size
         text = "OFV = " + str(self.get_value())
         plt.text(text_x, text_y, text, fontsize=10, color='blue', ha='center')
-        text_x, text_y = -0.2 * self.size, 0.90 * self.size
+        text_x, text_y = -0.2 * self.size, 0.80 * self.size
         text = str(len(self.resources)) + " resources unused"
         plt.text(text_x, text_y, text, fontsize=10, color='blue', ha='center')
-        text_x, text_y = -0.2 * self.size, 0.85 * self.size
+        text_x, text_y = -0.2 * self.size, 0.75 * self.size
         text = "Burned Nodes = " + str(sum(1 for time in self.fire_arrivals.values() if time < self.time_horizon))
         plt.text(text_x, text_y, text, fontsize=10, color='blue', ha='center')
-        plt.show()
+        plt.show(block=False)
         #plt.show(block=True)
 

@@ -1,6 +1,9 @@
 '''
+Author: Marco Giberna
+Email: gibimarco@gmail.com
 CPU model: Intel(R) Core(TM) i5-5350U CPU @ 1.80GHz
 Thread count: 2 physical cores, 4 logical processors, using up to 4 threads
+python3.9.9
 '''
 import gurobipy as gb #v10.0.2
 import networkx as nx
@@ -13,7 +16,6 @@ def fire_resource_placement_model(dict, time_horizon, setup1):
     G = dict["graph"]
     # fire resources placement model
     FRP = gb.Model()
-
     # SETS AND PARAMETERS
     # N set of nodes
     N = G.nodes()
@@ -25,7 +27,7 @@ def fire_resource_placement_model(dict, time_horizon, setup1):
     # h target instant
     h = time_horizon
     # K set of time instants
-    K = range(1,h+1) #start from 0 or 1?
+    K = range(1,h+1)
     # ign ignition node
     ign = dict["ignition_node"]
     # n number of nodes
@@ -63,7 +65,6 @@ def fire_resource_placement_model(dict, time_horizon, setup1):
         R = R2
         a = a2
         eps = eps2
-
     # DECISION VARIABLES
     # x_ij the number of shortest paths that include arc i,j
     X = FRP.addVars([(i, j) for i, j in A], vtype=gb.GRB.INTEGER, name="X")
@@ -79,13 +80,12 @@ def fire_resource_placement_model(dict, time_horizon, setup1):
     O = FRP.addVars([k for k in K], vtype=gb.GRB.INTEGER, name="O")
     # z^kr_i a binary variable that equals 1 if node i receives resource r at instant k (bk), and 0 otherwise
     Z = FRP.addVars([(i,k,r) for i in N for k in K for r in R], vtype=gb.GRB.BINARY, name="Z")
-
     # CONSTRAINTS
     # force that n − 1 paths departure from the ignition node ign (starting node)
     #FRP.addConstr((X[ign, :].sum() == n - 1), name = 'Constraint2')
     FRP.addConstr((gb.quicksum(X[(i, j)] for (i,j) in A if i == ign) == n - 1), name='Constraint2')
     # guarantees that one path reaches each node in the network
-    FRP.addConstrs((-gb.quicksum(X[(i,j)] for (l,j) in A if l == i) + gb.quicksum(X[(j,i)] for (j,l) in A if l == i)  == 1 for i in N if i != ign), name = 'Constraint3')
+    FRP.addConstrs((-gb.quicksum(X[(i,j)] for (l,j) in A if l == i) + gb.quicksum(X[(j,i)] for (j,l) in A if l == i) == 1 for i in N if i != ign), name = 'Constraint3')
     # the fire arrival time of ignition node is zero
     FRP.addConstr((T[ign] == 0), name='Constraint4')
     # activates the binary variable qi j if arc (i, j) belongs to a shortest path
@@ -114,14 +114,12 @@ def fire_resource_placement_model(dict, time_horizon, setup1):
     FRP.addConstrs((X[(i,j)] >= 0 for (i,j) in A), name="Constraint17a")
     FRP.addConstrs((S[(i,j)] >= 0 for (i,j) in A), name="Constraint17b")
     # Q, Y, Z binary
-
     # OBJECTIVE FUNCTION
     FRP.setObjective(gb.quicksum(Y[i,h] for i in N) + eps*gb.quicksum(Z[i,k,r] for i in N for k in K for r in R), gb.GRB.MINIMIZE)
-
     return FRP
 
 
-def optimize_and_write_model(dataset, setup):
+def optimize_and_write_model(dataset, setup, use_reduced_dataset):
     time_horizon = 28
     if setup:
         n_resources = "5"
@@ -129,11 +127,12 @@ def optimize_and_write_model(dataset, setup):
         n_resources = "6"
     # SOLVE
     reduced_dataset = [dict for dict in dataset if dict["instance"] <= 24]
-    dataset = reduced_dataset
+    if use_reduced_dataset:
+        dataset = reduced_dataset
     for dict in dataset:
-        if dict["instance"] <= 17 and setup==True:
-            continue
+        print("##########################################################################")
         print("Creating and Optimizing Model for Instance #" + str(dict["instance"]) + "...")
+        print("##########################################################################")
         t_0 = time.time()
         FRP = fire_resource_placement_model(dict, time_horizon, setup1=setup)
         FRP.setParam('TimeLimit', 7200)
@@ -161,7 +160,6 @@ def optimize_and_write_model(dataset, setup):
             dataset[dict["instance"] - 1]["SolCount"] = str(FRP.SolCount)
             dataset[dict["instance"] - 1]["Runtime"] = str(FRP.Runtime)
             dataset[dict["instance"] - 1]["TotalTime"] = t
-
         if dict["instance"] == 1:
             with open("dataset_optimised_" + str(n_resources) + "resources.csv", "w", newline="") as fp:
                 writer = csv.DictWriter(fp, fieldnames=dataset[dict["instance"] - 1].keys())
@@ -174,7 +172,6 @@ def optimize_and_write_model(dataset, setup):
         FRP.write("./Results/Models/FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.mps")
         if FRP.status == gb.GRB.OPTIMAL:
             FRP.write("./Results/Models/FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.sol")
-
     print(dataset)
     with open('dataset_optimised_' + str(n_resources) + 'resources.pickle', 'wb') as file:
         pickle.dump(dataset, file)
@@ -185,11 +182,10 @@ if __name__ == '__main__':
         dataset = pickle.load(file)
     # Set whether to use setup1 (true - 5 resources) or setup2 (false - 6 resources)
     setup = True
-    optimize_and_write_model(dataset, setup) # 5 resources
-
+    optimize_and_write_model(dataset, setup, use_reduced_dataset=False)  # 5 resources
     with open('dataset.pickle', 'rb') as file:
         dataset = pickle.load(file)
     # Set whether to use setup1 (true - 5 resources) or setup2 (false - 6 resources)
     setup = False
     # SOLVE
-    optimize_and_write_model(dataset, setup)  # 6 resources
+    optimize_and_write_model(dataset, setup, use_reduced_dataset=False)  # 6 resources

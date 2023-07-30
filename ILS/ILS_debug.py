@@ -1,5 +1,8 @@
 '''
+Author: Marco Giberna
+Email: gibimarco@gmail.com
 CPU model: Intel(R) Core(TM) i5-5350U CPU @ 1.80GHz
+python3.9.9
 '''
 import random
 import numpy as np
