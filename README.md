@@ -18,6 +18,7 @@ Other libraries used:
 - numpy
 - copy
 - logging
+- os
 
 ## ILS directory
 It contains all the necessary to run the Iterated Local Search algorithm for the placement of wildland fire suppression resources.

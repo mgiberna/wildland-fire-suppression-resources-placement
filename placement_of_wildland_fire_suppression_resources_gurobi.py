@@ -10,6 +10,7 @@ import networkx as nx
 import time
 import pickle
 import csv
+import os
 
 
 def fire_resource_placement_model(dict, time_horizon, setup1):
@@ -170,9 +171,13 @@ def optimize_and_write_model(dataset, setup, use_reduced_dataset=False, write_so
                 writer = csv.DictWriter(fp, fieldnames=dataset[dict["instance"] - 1].keys())
                 writer.writerow(dataset[dict["instance"] - 1])
         if write_solutions:
-            FRP.write("./Results/Models/FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.mps")
+            models_path = "./Results/Models/"
+            if not os.path.exists(models_path):
+                # Create the directory
+                os.makedirs(models_path)
+            FRP.write(models_path + "FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.mps")
             if FRP.status == gb.GRB.OPTIMAL:
-                FRP.write("./Results/Models/FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.sol")
+                FRP.write(models_path + "FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.sol")
     with open('dataset_optimised_' + str(n_resources) + 'resources.pickle', 'wb') as file:
         pickle.dump(dataset, file)
 
