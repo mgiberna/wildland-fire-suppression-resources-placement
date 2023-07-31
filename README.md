@@ -1,9 +1,9 @@
 # wildland-fire-suppression-resources-placement
-Final Project for the Master Course "Mathematical Optimisation". 
+Final Project for the Master Course "Mathematical Optimisation" A.Y. 2022/2023 Spring Semester. 
 Implementation of a model of mixed-integer linear programming from Mendes, A. B., & e Alvelos, F. P. (2023). Iterated local search for the placement of wildland fire suppression resources. European Journal of Operational Research, 304(3), 887-900, https://doi.org/10.1016/j.ejor.2022.04.037. 
 
 ## Required Dependencies
-Apart some very common libraries, in this project networkX (v3.1) has been used. To install it:
+Other than some very common libraries, in this project networkX (v3.1) has been used. To install it:
 ```
 !pip install networkx #v3.1
 ```
