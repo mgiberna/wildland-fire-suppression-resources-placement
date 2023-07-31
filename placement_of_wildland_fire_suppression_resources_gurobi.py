@@ -119,7 +119,7 @@ def fire_resource_placement_model(dict, time_horizon, setup1):
     return FRP
 
 
-def optimize_and_write_model(dataset, setup, use_reduced_dataset):
+def optimize_and_write_model(dataset, setup, use_reduced_dataset=False, write_solutions=False):
     time_horizon = 28
     if setup:
         n_resources = "5"
@@ -169,10 +169,10 @@ def optimize_and_write_model(dataset, setup, use_reduced_dataset):
             with open("dataset_optimised_" + str(n_resources) + "resources.csv", "a", newline="") as fp:
                 writer = csv.DictWriter(fp, fieldnames=dataset[dict["instance"] - 1].keys())
                 writer.writerow(dataset[dict["instance"] - 1])
-        FRP.write("./Results/Models/FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.mps")
-        if FRP.status == gb.GRB.OPTIMAL:
-            FRP.write("./Results/Models/FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.sol")
-    print(dataset)
+        if write_solutions:
+            FRP.write("./Results/Models/FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.mps")
+            if FRP.status == gb.GRB.OPTIMAL:
+                FRP.write("./Results/Models/FRP" + str(n_resources) + "resources_" + str(dict["instance"]) + "instance.sol")
     with open('dataset_optimised_' + str(n_resources) + 'resources.pickle', 'wb') as file:
         pickle.dump(dataset, file)
 
