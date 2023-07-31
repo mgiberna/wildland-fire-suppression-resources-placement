@@ -30,8 +30,9 @@ It contains a function to generate a single square graph, given the dimension an
 ## placement_of_wildland_fire_suppression_resources_gurobi.py
 Script that solve the presented optimisation problem by using gurobi.
 Running the script solves two problem given a dataset, each for a different number of resources used.
-It contains a function to optimize the model and write down the solution, given a dataset (from d_generation.py) and a setup (5 or 6 resources), moreover you can set use_reduced_dataset flag to optimize only the first 24 insances (i.e. skipping the last 8 which for the default dataset correspond to 30x30 size grids).
+It contains a function to optimize the model and write down the solution, given a dataset (from d_generation.py) and a setup (5 or 6 resources), moreover you can set use_reduced_dataset flag to optimize only the first 24 insances (i.e. skipping the last 8 which for the default dataset correspond to 30x30 size grids). With the "write_solutions" set to true, you can write for each instance the gurobi models and respective solutions (NOTE: MAKE SURE THAT YOUR FOLDERS STRUCTURE FOLLOWS THE OUTPUT FILES PATH)
 Furthermore, the fire_resource_placement_model function returns a gurobi model such as presented in the paper. It takes in input the setup and a single instance from the previous dataset, along with corresponding metadata. Moreover, you can set the use_reduced_dataset flag to implement and optimise only the first 24 instances, instead of all 32 (excluding 30x30 size instances).
+
 
 ## main.py
 This script run all the previously presented steps sequentially, in order to get the dataset, therefore the gurobi and ILS results.
